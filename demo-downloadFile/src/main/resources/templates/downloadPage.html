@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8">
+	<title>Download Page</title>
+</head>
+
+<body>
+	<button type="button" name="downloadButton" onclick="clickExportExcel()">下載 Excel</button>
+
+	<script>
+		function clickExportExcel() {
+			// Fetch GET 請求
+			fetch('/downloadExcel', {
+				method: 'GET',
+				headers: {
+					'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // 設置接受的回應類型
+				},
+			})
+				.then(response => {
+					if (response.ok) {
+						// 將回應轉換為 Blob
+						return response.blob();
+					} else {
+						throw new Error('請求失敗，狀態碼: ' + response.status);
+					}
+				})
+				.then(data => {
+					// 創建一個Blob URL，用於下載文件
+					var url = window.URL.createObjectURL(data);
+
+					
+					var a = document.createElement('a');
+					a.href = url;
+					document.body.appendChild(a); 
+					a.click();
+					window.URL.revokeObjectURL(url); // 釋放Blob URL資源
+					document.body.removeChild(a); 
+				})
+				.catch(error => {
+					// 處理錯誤
+					// console.log(error);
+					throw new Error('下載失敗');
+				});
+		}
+	</script>
+</body>
+
+</html>
