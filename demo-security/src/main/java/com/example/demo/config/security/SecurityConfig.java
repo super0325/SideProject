@@ -13,6 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 
 import com.example.demo.config.security.handler.MyLoginFailHandler;
 import com.example.demo.config.security.handler.MyLoginSuccessHandler;
+import com.example.demo.config.security.handler.MyLogoutSuccessHandler;
 
 @Configuration
 @EnableWebSecurity
@@ -25,6 +26,9 @@ public class SecurityConfig {
 	
 	@Autowired
 	private MyLoginFailHandler myLoginFailHandler;
+	
+	@Autowired
+	private MyLogoutSuccessHandler myLogoutSuccessHandler;
 
 
     @Bean
@@ -32,7 +36,7 @@ public class SecurityConfig {
 		
 		try {
 			httpSecurity
-			    //關閉對 CSRF（跨站請求偽造）攻擊的防護
+			    //前後端分離不需要CSRF（跨站請求偽造）攻擊的防護，關閉
 				.csrf((csrf) -> csrf
 						.disable()
 						)
@@ -57,12 +61,18 @@ public class SecurityConfig {
 //						.userDetailsService(springUserService))
 				.logout((logout) ->logout
 						.logoutUrl("/logout")
-						.logoutSuccessUrl("/")
+						.logoutSuccessHandler(myLogoutSuccessHandler)
+//						.clearAuthentication(true) // 清除認證狀態，默認為true
+//						.invalidateHttpSession(true) // 銷毁HttpSession對象，默認為true
 						)
 				//沒有權限
 		        .exceptionHandling((exceptionHandling) -> exceptionHandling
 		        		.accessDeniedPage("/403")
-		        		);
+//		        		)
+//		        // 前後端分離是無狀態的，不需要session，禁用
+//	            .sessionManagement(session -> session
+//	            		.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+	            		);
 			
 			return httpSecurity.build();
 			

@@ -5,7 +5,7 @@ spring:
   datasource:
 # -------------MSSQL------------- 
     driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
-    url: jdbc:sqlserver://localhost:1433;databaseName=education;TrustServerCertificate=True;encrypt=true;
+    url: jdbc:sqlserver://localhost:1433;databaseName=security;TrustServerCertificate=True;encrypt=true;
     username: sa    
     password: "0000"
 # -------------MYSQL------------- 

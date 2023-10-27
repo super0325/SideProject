@@ -19,6 +19,7 @@ public class MyLoginSuccessHandler implements AuthenticationSuccessHandler {
 
 		//下方為實為 UserDetails，取得用戶的詳細訊息 
 		//Object principal = authentication.getPrincipal();
+		//UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 		
 		response.sendRedirect("/");
 		

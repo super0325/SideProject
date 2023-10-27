@@ -31,7 +31,7 @@ public class ExcelController {
 	
 	
 	@GetMapping("/downloadExcel")
-	public ResponseEntity<InputStreamResource> downloadExcel() {
+	public ResponseEntity<InputStreamResource> downloadExcel() throws Exception {
 		
 	    // 指定Excel模板路徑，resources下方
 	    String templatePath = "static/excelTemplate/testDownload.xlsx";
@@ -42,16 +42,18 @@ public class ExcelController {
 	    
 	    // 使用Excel工具類根據模板和數據生成XSSFWorkbook
 	    XSSFWorkbook xssfWorkbook = excelUtil.simpleExcelMaker(templatePath, dataList, 6, 1, getterListForExcel);
-	    excelUtil.setValueToCell(xssfWorkbook, 3, 2, "日期測試 : yyyy-MM-dd tt");
+	    excelUtil.setValueToCell(xssfWorkbook, 3, 1, "日期測試 : yyyy-MM-dd tt");
 	    // 將XSSFWorkbook轉換為InputStreamResource，以便返回到前端
 	    InputStreamResource resultStream = excelUtil.convertExcelToInputStreamReasource(xssfWorkbook);
+	    
+	    String customFileName = "yourCustomFileName.xlsx";
 	    
 	    // 創建ResponseEntity並返回，設置必要的HTTP標頭
 	    return ResponseEntity.ok()
 	            .header("Access-Control-Expose-Header", "Content-Disposition") // 允許訪問Content-Disposition標頭
 //	            .contentType(MediaType.APPLICATION_OCTET_STREAM)
 	            .contentType(CustomMediaTypes.APPLICATION_XLSX) // 設置Content-Type為自定義的XLSX類型
-//				.header("Content-disposition", "attachment; filename=testDownload.xlsx")
+				.header("Content-Disposition", "attachment; filename=" + customFileName)
 	            .body(resultStream);
 	}
 

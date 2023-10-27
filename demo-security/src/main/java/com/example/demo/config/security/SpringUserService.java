@@ -30,7 +30,7 @@ public class SpringUserService implements UserDetailsService {
 
 	/*
 	 * 自訂義邏輯驗證 (數據庫)
-	 * @param	username
+	 * @param	account
 	 * @return	Spring Security 使用的用戶物件
 	 * @throws	UsernameNotFoundException
 	 */
