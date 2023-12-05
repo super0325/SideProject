@@ -2,79 +2,89 @@
 <html>
 
 <head>
-	<meta charset="UTF-8">
-	<title>Download Page</title>
-	<script src="../static/js/Common.js"></script>
+    <meta charset="UTF-8">
+    <title>Download Page</title>
+    <script src="../static/js/Common.js"></script>
 </head>
 
 <body>
-	<button type="button" name="downloadButton" onclick="clickExportExcel()">下載 Excel</button>
+    <button type="button" name="downloadXLSX" onclick="clickExportXLSX()">下載 XLSX</button>
+    <button type="button" name="downloadCSV" onclick="clickExportCSV()">下載 CSV</button>
 
-	<script>
-		function clickExportExcel() {
+    <script>
+        // 下載檔案
+        function downloadFile(url, mimeType, fileExtension) {
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'Accept': mimeType // 設置接受的回應類型
+                },
+            })
+                .then(response => {
+                    if (response.ok) {
+                        // 將回應轉換為 Blob
+                        return response.blob();
+                    } else {
+                        throw new Error('請求失敗，狀態碼: ' + response.status);
+                    }
+                })
+                .then(blobData => {
+                    if (blobData) {
+                        // 創建一個虛擬 <a> 元素
+                        var a = document.createElement('a');
+                        a.style.display = 'none'; // 隱藏虛擬元素
+                        document.body.appendChild(a);
 
-			// Fetch GET 請求
-			fetch('/downloadExcel', {
-				method: 'GET',
-				headers: {
-					'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' // 設置接受的回應類型
-				},
-			})
-				.then(response => {
-					if (response.ok) {
-						// 將回應轉換為 Blob
-						return response.blob();
-					} else {
-						throw new Error('請求失敗，狀態碼: ' + response.status);
-					}
-				})
-				.then(blobData => {
-					if (blobData) {
-						// 創建一個虛擬 <a> 元素
-						var a = document.createElement('a');
-						a.style.display = 'none'; // 隱藏虛擬元素
-						document.body.appendChild(a);
+                        // 創建一個 Blob URL
+                        var url = window.URL.createObjectURL(blobData);
+                        a.href = url;
 
-						// 創建一個 Blob URL
-						var url = window.URL.createObjectURL(blobData);
-						a.href = url;
+                        // 設置自定義文件名
+                        var fileName = 'Test_' + getCurrentYYYYMMDDHHmmssSSS() + fileExtension;
+                        a.download = fileName;
 
-						// 設置自定義文件名
-						var fileName = 'Test_' + getCurrentYYYYMMDDHHmmssSSS() + '.xlsx';
-						a.download = fileName;
+                        // 觸發下载
+                        a.click();
 
-						// 觸發下载
-						a.click();
+                        // 清理
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    }
+                    else {
+                        throw new Error('下載文件失敗');
+                    }
+                })
+        }
 
-						// 清理
-						window.URL.revokeObjectURL(url);
-						document.body.removeChild(a);
-					}
-					else {
-						throw new Error('下載失敗');
-					}
-				})
-		}
+        // CSV 下載
+        function clickExportCSV() {
+            downloadFile('/downloadCSV', 'text/csv', '.csv');
+        }
 
-		// 取得當前日期時間，YYYYMMDD HHmmss SSS
-		function getCurrentYYYYMMDDHHmmssSSS() {
-			var now = new Date();
+        // XLSX 下載
+        function clickExportXLSX() {
+            downloadFile('/downloadXLSX', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx');
+        }
 
-			var year = now.getFullYear(); // 取得當前年份（YYYY）
-			var month = (now.getMonth() + 1).toString().padStart(2, '0'); // 取得當前月份（需+1，因為月份從0開始計算，MM）
-			var day = now.getDate().toString().padStart(2, '0'); // 取得當前日期（DD）
+        // 取得當前日期時間，YYYYMMDD HHmmss SSS
+        function getCurrentYYYYMMDDHHmmssSSS() {
+            var now = new Date();
 
-			var hours = now.getHours().toString().padStart(2, '0'); // 取得當前小時（HH）
-			var minutes = now.getMinutes().toString().padStart(2, '0'); // 取得當前分鐘（mm）
-			var seconds = now.getSeconds().toString().padStart(2, '0'); // 取得當前秒數（ss）
+            var year = now.getFullYear(); // 取得當前年份（YYYY）
+            var month = (now.getMonth() + 1).toString().padStart(2, '0'); // 取得當前月份（需+1，因為月份從0開始計算，MM）
+            var day = now.getDate().toString().padStart(2, '0'); // 取得當前日期（DD）
 
-			var milliseconds = now.getMilliseconds().toString().padStart(3, '0'); // 取得當前毫秒數（SSS）
+            var hours = now.getHours().toString().padStart(2, '0'); // 取得當前小時（HH）
+            var minutes = now.getMinutes().toString().padStart(2, '0'); // 取得當前分鐘（mm）
+            var seconds = now.getSeconds().toString().padStart(2, '0'); // 取得當前秒數（ss）
 
-			var currentYYYYMMDDHHmmssSSS = year + month + day + hours + minutes + seconds + milliseconds;
+            var milliseconds = now.getMilliseconds().toString().padStart(3, '0'); // 取得當前毫秒數（SSS）
 
-			return currentYYYYMMDDHHmmssSSS;
-		}
-	</script>
+            var currentYYYYMMDDHHmmssSSS = year + month + day + hours + minutes + seconds + milliseconds;
+
+            return currentYYYYMMDDHHmmssSSS;
+        }
+    </script>
 </body>
 
 </html>
