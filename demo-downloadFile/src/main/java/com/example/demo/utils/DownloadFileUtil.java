@@ -2,11 +2,17 @@ package com.example.demo.utils;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -26,6 +32,9 @@ import org.springframework.stereotype.Component;
 
 import com.example.demo.myEnum.MergeType;
 import com.opencsv.CSVWriter;
+import com.spire.xls.FileFormat;
+import com.spire.xls.Workbook;
+
 
 @Component
 public class DownloadFileUtil {
@@ -294,6 +303,37 @@ public class DownloadFileUtil {
     }
     
     /**
+     *  將 XSSFWorkbook 對象轉換為 InputStream
+     * 
+     * @param pageIndex      工作表對象，代表 Excel 中的頁
+     * 
+     * @return InputStream 流，包含轉換後的資源
+     * 
+     * @throws Exception 
+     */
+    public ByteArrayInputStream convertXlsxToIS() throws Exception {
+    	
+    	ByteArrayOutputStream baos = new ByteArrayOutputStream(); // 創建一個字節陣列輸出流
+    	ByteArrayInputStream is = null; 
+    	
+    	try {
+//    		// 獲取真實工作表對象，代表 Excel 中的頁
+//    		int realPageIndex = pageIndex -1;
+//    		XSSFSheet sheet = xssfWorkbook.getSheetAt(realPageIndex);
+    		xssfWorkbook.write(baos);
+    		
+    		is = new ByteArrayInputStream(baos.toByteArray());
+    		
+    	} catch (IOException e) {
+    		String errorMessage = "無XSSFWorkbook資源: " + e.getMessage();
+    		System.err.println(errorMessage);
+    		throw e;
+    	}
+    	
+    	return is;
+    }
+    
+    /**
      * 使用 apache poi，將 Excel 轉換為 CSV。
      * 
      * @param pageIndex            獲取工作表對象，代表 Excel 中的頁
@@ -491,6 +531,92 @@ public class DownloadFileUtil {
             return (colIndex == firstCol) ? MergeType.HORIZONTAL_MERGE : MergeType.DEFAULT;
         }
         return MergeType.DEFAULT;
+    }
+    
+    /**
+     * 將 Excel 檔案轉換為 PDF 並返回 InputStreamResource 的方法。
+     *
+     * @return 包含 PDF 內容的 InputStreamResource
+     * @throws Exception 處理可能的例外
+     */
+    public InputStreamResource convertXlsxToPdf(String xlsxPath, String pdfPath) throws Exception {
+
+        try {
+            // 將 Excel 轉換為 PDF
+            excelToPdf(xlsxPath, pdfPath);
+
+            // 等待一段時間以確保寫入完成
+            Thread.sleep(1000);
+
+            // 讀取 PDF 文件並包裝為 InputStreamResource
+            File pdfFile = new File(pdfPath);
+            FileInputStream fileInputStream = new FileInputStream(pdfFile);
+            InputStreamResource isr = new InputStreamResource(fileInputStream);
+
+            // 返回 InputStreamResource
+            return isr;
+        } catch (Exception e) {
+            // 處理可能的例外
+            e.printStackTrace();
+            throw e; // 如果需要將例外傳遞給上層
+        }
+    }
+
+    /**
+     * 將 Excel 檔案轉換為 PDF 檔案的方法。
+     *
+     * @param xlsxPath 輸入的 Excel 檔案路徑
+     * @param pdfPath  輸出的 PDF 檔案路徑
+     */
+    public void excelToPdf(String xlsxPath, String pdfPath) {
+        try {
+            // 將 XSSFWorkbook 寫入到 Excel 檔案
+            try (FileOutputStream fos = new FileOutputStream(xlsxPath)) {
+                xssfWorkbook.write(fos);
+                fos.flush(); // 確保寫入操作已完成
+            } catch (IOException e) {
+                // 處理 IO 例外，並輸出更詳細的錯誤訊息
+                System.err.println("寫入 Excel 檔案時發生錯誤: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            // 從 Excel 檔案載入 Workbook
+//            Workbook workbook = new Workbook(xlsxPath); // aspose-cells
+            Workbook wb = new Workbook();                 // spire.xls
+            wb.loadFromFile(xlsxPath);                    // spire.xls
+
+            // 將 Workbook 儲存為 PDF 檔案
+//            workbook.save(pdfPath, SaveFormat.PDF);     // aspose-cells
+            wb.saveToFile(pdfPath, FileFormat.PDF);       // spire.xls
+        } catch (Exception e) {
+            // 處理其他例外，並輸出更詳細的錯誤訊息
+            System.err.println("轉換 Excel 到 PDF 時發生錯誤: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 刪除指定路徑的檔案。
+     *
+     * @param filePath 欲刪除的檔案路徑
+     */
+    public void deleteFile(String filePath) {
+    	// 建立 Path 物件
+        Path path = Paths.get(filePath);
+
+        try {
+            // 使用 Files 判斷檔案是否存在並進行刪除
+            if (Files.exists(path)) {
+                Files.delete(path);
+                System.out.println(filePath + " 檔案已刪除");
+            } else {
+                System.out.println(filePath + " 檔案不存在");
+            }
+        } catch (Exception e) {
+            // 處理例外情況
+            System.out.println("無法刪除 " + filePath + " 檔案");
+            e.printStackTrace();
+        }
     }
 
 }
