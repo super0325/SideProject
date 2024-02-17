@@ -101,8 +101,8 @@ public class DownloadFileController {
 		String currentTime = currentTime_yyyyMMddHHmmssSSS();
 		
 		// 定義 Excel 檔案和 PDF 檔案的路徑
-		String xlsxPath = "C:/Users/Hyweber/Desktop/xlsx_" + currentTime + ".xlsx";
-		String pdfPath = "C:/Users/Hyweber/Desktop/pdf_" + currentTime + ".pdf";
+		String xlsxPath = "C:/Users/user/Desktop/xlsx_" + currentTime + ".xlsx";
+		String pdfPath = "C:/Users/user/Desktop/pdf_" + currentTime + ".pdf";
 		// 將XSSFWorkbook 轉換為 Pdf
 		InputStreamResource isr = dfu.convertXlsxToPdf(xlsxPath, pdfPath);
 		
