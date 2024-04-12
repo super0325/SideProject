@@ -1,5 +1,9 @@
 server:
   port: 8444
+  servlet:
+    context-path: /downloadFile
+    encoding:
+      charset: UTF-8
   
 spring:
   datasource:
