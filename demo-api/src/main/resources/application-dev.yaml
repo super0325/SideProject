@@ -1,0 +1,28 @@
+server:
+  port: 9090
+  servlet:
+    context-path: /openApi
+    encoding:
+      charset: UTF-8
+
+springdoc:
+# ------------swagger-ui-------------
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+# ------------api-docs endpoint-------------
+  api-docs:
+    path: /api-docs
+    enabled: true
+  packagesToScan: com.example
+
+spring:
+  datasource:
+# -------------MSSQL------------- 
+    driver-class-name: com.microsoft.sqlserver.jdbc.SQLServerDriver
+    url: jdbc:sqlserver://localhost:1433;databaseName=openApi;TrustServerCertificate=True;encrypt=true;
+    username: sa
+    password: "0000"
+    
+openApiUrl: http://localhost:9090/openApi
+openApiServer: Development server
