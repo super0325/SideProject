@@ -43,7 +43,9 @@ public class DownloadFileUtil {
 	private ResourceLoader resourceLoader;
 	
 	// 共用 Excel 工作簿，必先執行產生 Excel
-	private XSSFWorkbook xssfWorkbook = new XSSFWorkbook();
+	protected XSSFWorkbook xssfWorkbook = new XSSFWorkbook();
+	// 預設模板首頁的標題排數
+	protected int templateTitleRows = -999; 
 	
 	
 	/**
@@ -83,37 +85,86 @@ public class DownloadFileUtil {
 	 * 
 	 * @param <T>
 	 * @param templatePath          模板檔案的資源路徑
-	 * @param pageIndex             工作表對象，代表 Excel 中的頁
 	 * @param dataList              包含資料的列表
 	 * @param targetRowIndex        目標"列"的起始索引，上方，工作表中的特定位置
 	 * @param columnIndexLeft       目標"欄"的起始索引，左側，工作表中的特定位置
 	 * @param getterListForExcel    包含需要的getter列表
+	 * @param templateTitleRows     模板的首頁標題排數
+	 * @param limitRow              每頁限制的排數
 	 * 
 	 * @throws Exception 
 	 */
-	public <T> void simpleExcelMaker(String templatePath, int pageIndex, List<T> dataList, int targetRowIndex, int columnIndexLeft, List<String> getterListForExcel) throws Exception {
+	protected <T> void simpleExcelMaker(String templatePath, List<T> dataList, int targetRowIndex, int columnIndexLeft, List<String> getterListForExcel,int templateTitleRows, int limitRow) throws Exception {
 	    // 獲取模板文件的 InputStream
 		try (InputStream is = getTemplateAsInputStream(templatePath);) {
 				
 			// 基於模板，創建一個新的 XSSFWorkbook 對象，代表 Excel 工作簿
 			xssfWorkbook = new XSSFWorkbook(is);
-			// 獲取真實工作表對象，代表 Excel 中的頁
-	    	int realPageIndex = pageIndex -1;
-            XSSFSheet sheet = xssfWorkbook.getSheetAt(realPageIndex);
-            // 模板中的第一列，來源列，即樣板樣式
-            int sourceRowIndex = 1;
+			// 獲取首個工作表對象，代表 Excel 中的頁
+            XSSFSheet sheet = xssfWorkbook.getSheetAt(0);
+            // 模板中的來源列，即樣板樣式
+            int sourceRowIndex = limitRow + 1;
+            // 獲取資料列表的大小
+            int dataSize = dataList.size();
+            // 計算需要的總頁數(標題加上資料數)，將資料列表分頁處理以便放入 Excel 工作表
+            int totalPage = ((dataSize + templateTitleRows) / limitRow) + 1;
             
-            // 使用dataList物件，根據資料數量 動態產生targetRow，並複製樣式，同時設置儲存格的值
-            for (int i = 0; i < dataList.size(); i++) {
-            	T data = dataList.get(i);
-            	copyCellStyleAndHeightAndSetValue(sheet, data, sourceRowIndex, i + targetRowIndex, columnIndexLeft, getterListForExcel);
+            copyAdditionalSheets(totalPage, xssfWorkbook);
+            
+            // 使用 dataList 中的資料填充 Excel 工作表
+            int counter = 0;                                          // 計數器，用於追蹤當前工作表
+            for (int i = 0; i < dataSize; i++) {
+                T data = dataList.get(i);                             // 獲取當前資料
+                // 如果當前行數超過了工作表的限制，則切換到下一個工作表
+                if ((i + targetRowIndex) > limitRow) {
+                    counter++;                                        // 計數器加一
+                    sheet = xssfWorkbook.getSheetAt(counter);         // 切換到下一個工作表
+                    targetRowIndex = -(i - 1);                        // 重新計算目標行索引
+                }
+                // 將資料的值設置到工作表的對應儲存格中
+                copyCellStyleAndHeightAndSetValue(sheet, data, sourceRowIndex, i + targetRowIndex, columnIndexLeft, getterListForExcel);
             }
+
+            // 移除每個工作表的最後一行
+            removeLastRowFromSheets(xssfWorkbook, limitRow);
 	            
 		} catch (IOException e) {
 			String errorMessage = "simpleExcelMaker 錯誤: " + e.getMessage();
             System.err.println(errorMessage);
         	throw e;
 		}
+	}
+	
+	/**
+	 * 複製額外的工作表到工作簿中，用於處理大量數據時的分頁顯示。
+	 * 
+	 * @param totalPage    需要的總頁數
+	 * @param xssfWorkbook 要複製工作表的 XSSFWorkbook 對象
+	 */
+	private <T> void copyAdditionalSheets(int totalPage, XSSFWorkbook xssfWorkbook) {
+	    
+	    // 遍歷每頁，對第二個工作表之後的每一工作頁進行副本
+	    for (int i = 0; i < (totalPage - 2); i++) {
+	        // 複製第二工作頁做為來源，並給新工作頁命名
+	        xssfWorkbook.cloneSheet(1, "new" + (i + 3));
+	    }
+	}
+	
+	/**
+	 * 從每個工作表中移除最後一行。
+	 * 
+	 * @param xssfWorkbook 要操作的 XSSFWorkbook 對象
+	 * @param limitRow     每頁限制的行數
+	 */
+	private void removeLastRowFromSheets(XSSFWorkbook xssfWorkbook, int limitRow) {
+	    // 獲取工作簿中的總頁數
+	    int totalPage = xssfWorkbook.getNumberOfSheets();
+	    
+	    // 遍歷每個工作表，移除最後一行
+	    for (int i = 0; i < totalPage; i++) {
+	        XSSFSheet tmpSheet = xssfWorkbook.getSheetAt(i);
+	        tmpSheet.removeRow(tmpSheet.getRow(limitRow));
+	    }
 	}
 	
 	/**
@@ -246,7 +297,7 @@ public class DownloadFileUtil {
      * @param columnIndex          目標儲存格所在的列索引
      * @param stringValue          要設定的目標儲存格值 (字串)
      */
-    public void setValueToCell(int pageIndex, int rowIndex, int columnIndex, String stringValue) {
+    protected void setValueToCell(int pageIndex, int rowIndex, int columnIndex, String stringValue) {
     	// 獲取真實工作表對象，代表 Excel 中的頁
     	int realPageIndex = pageIndex -1;
     	XSSFSheet sheet = xssfWorkbook.getSheetAt(realPageIndex);
@@ -265,26 +316,18 @@ public class DownloadFileUtil {
     }
     
     /**
-     *  先獲取工作表後，刪除第一列模板來源列，並向上移動所有列
      *  將 XSSFWorkbook 對象轉換為 InputStreamResource 並設定相關屬性。
-     * 
-     * @param pageIndex      工作表對象，代表 Excel 中的頁
      * 
      * @return InputStreamResource 物件，包含轉換後的資源
      * 
      * @throws Exception 
      */
-    public InputStreamResource convertXlsxToISR(int pageIndex) throws Exception {
+    protected InputStreamResource convertXlsxToISR() throws Exception {
     	
     	ByteArrayOutputStream baos = new ByteArrayOutputStream(); // 創建一個字節陣列輸出流
     	InputStreamResource isr = null; // 這個物件可用於後續操作，例如設定 HTTP 響應的主體部分
     	
     	try {
-    		// 獲取真實工作表對象，代表 Excel 中的頁
-        	int realPageIndex = pageIndex -1;
-        	XSSFSheet sheet = xssfWorkbook.getSheetAt(realPageIndex);
-    		// 刪除第一列（索引為0），並向上移動所有列
-    		sheet.shiftRows(1, sheet.getLastRowNum(), -1); 
     		// 將 XSSFWorkbook 寫入到字節陣列輸出流中
     		xssfWorkbook.write(baos);
     		
@@ -302,88 +345,93 @@ public class DownloadFileUtil {
     	return isr;
     }
     
-    /**
-     *  將 XSSFWorkbook 對象轉換為 InputStream
-     * 
-     * @param pageIndex      工作表對象，代表 Excel 中的頁
-     * 
-     * @return InputStream 流，包含轉換後的資源
-     * 
-     * @throws Exception 
-     */
-    public ByteArrayInputStream convertXlsxToIS() throws Exception {
-    	
-    	ByteArrayOutputStream baos = new ByteArrayOutputStream(); // 創建一個字節陣列輸出流
-    	ByteArrayInputStream is = null; 
-    	
-    	try {
-//    		// 獲取真實工作表對象，代表 Excel 中的頁
-//    		int realPageIndex = pageIndex -1;
-//    		XSSFSheet sheet = xssfWorkbook.getSheetAt(realPageIndex);
-    		xssfWorkbook.write(baos);
-    		
-    		is = new ByteArrayInputStream(baos.toByteArray());
-    		
-    	} catch (IOException e) {
-    		String errorMessage = "無XSSFWorkbook資源: " + e.getMessage();
-    		System.err.println(errorMessage);
-    		throw e;
-    	}
-    	
-    	return is;
-    }
+//    /**
+//     *  將 XSSFWorkbook 對象轉換為 InputStream
+//     * 
+//     * @param pageIndex      工作表對象，代表 Excel 中的頁
+//     * 
+//     * @return InputStream 流，包含轉換後的資源
+//     * 
+//     * @throws Exception 
+//     */
+//    public ByteArrayInputStream convertXlsxToIS() throws Exception {
+//    	
+//    	ByteArrayOutputStream baos = new ByteArrayOutputStream(); // 創建一個字節陣列輸出流
+//    	ByteArrayInputStream is = null; 
+//    	
+//    	try {
+////    		// 獲取真實工作表對象，代表 Excel 中的頁
+////    		int realPageIndex = pageIndex -1;
+////    		XSSFSheet sheet = xssfWorkbook.getSheetAt(realPageIndex);
+//    		xssfWorkbook.write(baos);
+//    		
+//    		is = new ByteArrayInputStream(baos.toByteArray());
+//    		
+//    	} catch (IOException e) {
+//    		String errorMessage = "無XSSFWorkbook資源: " + e.getMessage();
+//    		System.err.println(errorMessage);
+//    		throw e;
+//    	}
+//    	
+//    	return is;
+//    }
     
     /**
      * 使用 apache poi，將 Excel 轉換為 CSV。
-     * 
-     * @param pageIndex            獲取工作表對象，代表 Excel 中的頁
      * 
      * @return 轉換後的 CSV 字節陣列
      * 
      * @throws Exception
      */
-    public InputStreamResource convertXlsxToCsv(int pageIndex) throws Exception {
+    protected InputStreamResource convertXlsxToCsv() throws Exception {
         // 創建CSVWriter
         StringWriter sw = new StringWriter();
 
         try (CSVWriter csvWriter = new CSVWriter(sw, ',', '\"', '\\', "\r\n")) {
-            // 獲取真實工作表
-            int realPageIndex = pageIndex - 1;
-            XSSFSheet sheet = xssfWorkbook.getSheetAt(realPageIndex);
-
-            for (int rowIndex = 0; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
-                Row row = sheet.getRow(rowIndex); // 獲取工作表的行
-
-                if (row != null) {
-                    List<String> rowData = new ArrayList<>(); // Csv 資料
-
-                    for (int colIndex = 0; colIndex < row.getLastCellNum(); colIndex++) {
-                        Cell cell = row.getCell(colIndex); // 獲取儲存格
-
-                        String cellValue = ""; // 儲存格的預設值
-                        boolean isMergedCell = cellIsPartOfMergeRegion(sheet, cell); // 判斷是否為合併儲存格
-
-                        if (cell != null) {
-                            // 如果是合併儲存格
-                            if (isMergedCell) {
-                                cellValue = getMergedRegionValue(sheet, cell); // 獲取合併區域的值
-                            } else {
-                                cellValue = cell.toString(); // 獲取儲存格的字串值
-                            }
-                        }
-
-                        // 將值根據合併區域放置在最左、最上、或最左上
-                        if (cell != null && isMergedCell) {
-                            CellRangeAddress region = getMergedRegion(sheet, cell); // 獲取合併區域的資訊
-                            placeValueBasedOnMergeDirection(cell, isMergedCell, rowIndex, colIndex, rowData, cellValue, region);
-                        } else {
-                            rowData.add(cellValue); // 非合併區域的儲存格，直接添加值到 rowData
-                        }
-                    }
-
-                    csvWriter.writeNext(rowData.toArray(new String[0])); // 將 rowData 寫入 CSVWriter
-                }
-            }
+        	// 遍歷所有工作表
+        	for (int sheetIndex = 0; sheetIndex < xssfWorkbook.getNumberOfSheets(); sheetIndex++) {
+        		XSSFSheet sheet = xssfWorkbook.getSheetAt(sheetIndex); // 獲取工作表
+        		// 遍歷工作表的每一行
+	            for (int rowIndex = 0; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+	                Row row = sheet.getRow(rowIndex); // 獲取工作表的行
+	
+	                if ((row != null) && (!isEmptyRow(row))) {
+	                    List<String> rowData = new ArrayList<>(); // Csv 資料
+	
+	                    // 遍歷每一行的每一列
+	                    for (int colIndex = 0; colIndex < row.getLastCellNum(); colIndex++) {
+	                        Cell cell = row.getCell(colIndex); // 獲取儲存格
+	
+	                        String cellValue = ""; // 儲存格的預設值
+	                        boolean isMergedCell = cellIsPartOfMergeRegion(sheet, cell); // 判斷是否為合併儲存格
+	
+	                        if (cell != null) {
+	                            // 如果是合併儲存格
+	                            if (isMergedCell) {
+	                                cellValue = getMergedRegionValue(sheet, cell); // 獲取合併區域的值
+	                            } else {
+	                                cellValue = cell.toString(); // 獲取儲存格的字串值
+	                            }
+	                        }
+	
+	                        // 將值根據合併區域放置在最左、最上、或最左上
+	                        if (cell != null && isMergedCell) {
+	                            CellRangeAddress region = getMergedRegion(sheet, cell); // 獲取合併區域的資訊
+	                            placeValueBasedOnMergeDirection(cell, isMergedCell, rowIndex, colIndex, rowData, cellValue, region);
+	                        } else {
+	                            rowData.add(cellValue); // 非合併區域的儲存格，直接添加值到 rowData
+	                        }
+	                    }
+	
+	                    // 如果不是空行，就輸出數據
+	                    if (!rowData.isEmpty()) {
+	                    	csvWriter.writeNext(rowData.toArray(new String[0])); // 將 rowData 寫入 CSVWriter
+	                    }
+	                    
+	                }
+	            }
+        	}
+	            
         } catch (IOException e) {
             String errorMessage = "無法關閉 CSVWriter: " + e.getMessage();
             System.err.println(errorMessage);
@@ -396,7 +444,30 @@ public class DownloadFileUtil {
 
         return isr;
     }
+    
+    /**
+     * 判斷行是否為空行
+     * 
+     * @param  row 要檢查的行
+     * @return 如果行中的所有儲存格都為空，則返回 true；否則返回 false
+     */
+    private boolean isEmptyRow(Row row) {
+        // 獲取行中第一個儲存格的索引
+        int firstCellIndex = row.getFirstCellNum();
+        // 獲取行中最後一個儲存格的索引
+        int lastCellIndex = row.getLastCellNum();
 
+        // 遍歷行中的所有儲存格
+        for (int colIndex = firstCellIndex; colIndex < lastCellIndex; colIndex++) {
+            Cell cell = row.getCell(colIndex);
+            // 如果任何一個儲存格不為空，則返回 false
+            if (cell != null && !cell.toString().isEmpty()) {
+                return false;
+            }
+        }
+        // 所有儲存格都為空，返回 true
+        return true;
+    }
 
     /**
      * 檢查儲存格是否屬於合併區域。
@@ -539,7 +610,7 @@ public class DownloadFileUtil {
      * @return 包含 PDF 內容的 InputStreamResource
      * @throws Exception 處理可能的例外
      */
-    public InputStreamResource convertXlsxToPdf(String xlsxPath, String pdfPath) throws Exception {
+    protected InputStreamResource convertXlsxToPdf(String xlsxPath, String pdfPath) throws Exception {
 
         try {
             // 將 Excel 轉換為 PDF
@@ -600,7 +671,7 @@ public class DownloadFileUtil {
      *
      * @param filePath 欲刪除的檔案路徑
      */
-    public void deleteFile(String filePath) {
+    protected void deleteFile(String filePath) {
     	// 建立 Path 物件
         Path path = Paths.get(filePath);
 
@@ -618,5 +689,5 @@ public class DownloadFileUtil {
             e.printStackTrace();
         }
     }
-
+    
 }

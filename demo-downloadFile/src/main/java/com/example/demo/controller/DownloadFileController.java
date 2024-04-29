@@ -16,13 +16,10 @@ import com.example.demo.service.PersonService;
 import com.example.demo.utils.DownloadFileUtil;
 
 @Controller
-public class DownloadFileController {
+public class DownloadFileController extends DownloadFileUtil {
 	
 	@Autowired
 	private PersonService personService;
-	
-	@Autowired
-	private DownloadFileUtil dfu;
 	
 	
 	@GetMapping({"/", "/downloadPage"})
@@ -30,9 +27,9 @@ public class DownloadFileController {
 		return "downloadPage";
 	}
 	
-	
 	/**
      * 匯出 XLSX
+     * 需先製作模板，且預設每頁限制排數，模板排來源及為其的下一排
      * 
      * @throws Exception 
      */
@@ -45,13 +42,16 @@ public class DownloadFileController {
 	    List<Person> dataList = personService.findAll();
 	    // 獲取需要的getter列表
 	    List<String> getterListForExcel = personService.getterListForExcel();
+	    // 模板首頁的標題排數
+	    templateTitleRows = 4;
 	    
 	    // 使用Excel工具類根據模板和數據生成XSSFWorkbook
-	    dfu.simpleExcelMaker(templatePath, 1, dataList, 6, 1, getterListForExcel);
-	    dfu.setValueToCell(1, 3, 1, "日期測試 : yyyy-MM-dd tt");
+	    simpleExcelMaker(templatePath, dataList, 5, 1, getterListForExcel, templateTitleRows, 8);
+//	    dfu.simpleExcelMaker(templatePath, dataList, 5, 2, getterListForExcel, templateTitleRows, 8);
+	    setValueToCell(1, 2, 1, "日期測試 : yyyy-MM-dd tt");
 	    
-	    // 傳入需要的 XSSFWorkbook 及頁面索引，並轉換為 InputStreamResource，以便返回到前端
-	    InputStreamResource isr = dfu.convertXlsxToISR(1);
+	    // 將需要的 XSSFWorkbook，轉換為 InputStreamResource，以便返回到前端
+	    InputStreamResource isr = convertXlsxToISR();
 	    
 	    String fileName = "myFileName.xlsx";
 	    
@@ -75,7 +75,7 @@ public class DownloadFileController {
     	downloadXLSX();
     	
     	// 傳入需要的 XSSFWorkbook 以及頁數索引，並轉換為 Csv
-    	InputStreamResource isr = dfu.convertXlsxToCsv(1);
+    	InputStreamResource isr = convertXlsxToCsv();
         
     	String fileName = "myFileName.csv";
 
@@ -101,13 +101,16 @@ public class DownloadFileController {
 		String currentTime = currentTime_yyyyMMddHHmmssSSS();
 		
 		// 定義 Excel 檔案和 PDF 檔案的路徑
-		String xlsxPath = "C:/Users/user/Desktop/xlsx_" + currentTime + ".xlsx";
-		String pdfPath = "C:/Users/user/Desktop/pdf_" + currentTime + ".pdf";
+//		String xlsxPath = "C:/Users/user/Desktop/xlsx_" + currentTime + ".xlsx";
+//		String pdfPath = "C:/Users/user/Desktop/pdf_" + currentTime + ".pdf";
+		String xlsxPath = "C:/Users/Hyweber/Desktop/xlsx_" + currentTime + ".xlsx";
+		String pdfPath = "C:/Users/Hyweber/Desktop/pdf_" + currentTime + ".pdf";
+		
 		// 將XSSFWorkbook 轉換為 Pdf
-		InputStreamResource isr = dfu.convertXlsxToPdf(xlsxPath, pdfPath);
+		InputStreamResource isr = convertXlsxToPdf(xlsxPath, pdfPath);
 		
 		// 刪除 Excel 檔案
-		dfu.deleteFile(xlsxPath);
+		deleteFile(xlsxPath);
 		
 		String fileName = "myFileName.pdf";
 		

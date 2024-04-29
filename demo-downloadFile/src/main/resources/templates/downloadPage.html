@@ -8,13 +8,17 @@
 </head>
 
 <body>
-    <button type="button" name="downloadXLSX" onclick="clickExportXLSX()">下載 XLSX</button>
-    <button type="button" name="downloadCSV" onclick="clickExportCSV()">下載 CSV</button>
-    <button type="button" name="downloadPDF" onclick="clickExportPDF()">下載 PDF</button>
+    <button type="button" name="downloadXLSX" onclick="clickExportXLSX(this)">下載 XLSX</button>
+    <button type="button" name="downloadCSV" onclick="clickExportCSV(this)">下載 CSV</button>
+    <button type="button" name="downloadPDF" onclick="clickExportPDF(this)">下載 PDF</button>
 
     <script>
         // 下載檔案
-        function downloadFile(url, mimeType, fileExtension) {
+        function downloadFile(url, mimeType, fileExtension, button) {
+        	
+        	// 鎖定按鈕
+            button.disabled = true;
+        	
         	//Fetch  GET 請求
             fetch(url, {
                 method: 'GET',
@@ -51,26 +55,35 @@
                         // 清理
                         window.URL.revokeObjectURL(url);
                         document.body.removeChild(a);
+                        
+                     	// 解鎖按鈕
+                        button.disabled = false;
+                     
                     }
                     else {
                         throw new Error('下載文件失敗');
                     }
                 })
+                .catch(error => {
+                    console.error('下載文件出錯:', error);
+                    // 解鎖按鈕
+                    button.disabled = false;
+                });
         }
 
         // PDF 下載
-        function clickExportPDF() {
-            downloadFile('/downloadPDF', 'application/pdf', '.pdf');
+        function clickExportPDF(button) {
+            downloadFile('/downloadFile/downloadPDF', 'application/pdf', '.pdf', button);
         }
         
         // CSV 下載
-        function clickExportCSV() {
-            downloadFile('/downloadCSV', 'text/csv', '.csv');
+        function clickExportCSV(button) {
+            downloadFile('/downloadFile/downloadCSV', 'text/csv', '.csv', button);
         }
 
         // XLSX 下載
-        function clickExportXLSX() {
-            downloadFile('/downloadXLSX', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx');
+        function clickExportXLSX(button) {
+            downloadFile('/downloadFile/downloadXLSX', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx', button);  
         }
         
 
