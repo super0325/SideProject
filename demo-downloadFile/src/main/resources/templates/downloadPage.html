@@ -8,9 +8,9 @@
 </head>
 
 <body>
-    <button type="button" name="downloadXLSX" onclick="clickExportXLSX(this)">下載 XLSX</button>
-    <button type="button" name="downloadCSV" onclick="clickExportCSV(this)">下載 CSV</button>
-    <button type="button" name="downloadPDF" onclick="clickExportPDF(this)">下載 PDF</button>
+    <button type="button" name="downloadXlsx" onclick="clickExportXlsx(this)">下載 XLSX</button>
+    <button type="button" name="downloadCsv" onclick="clickExportCsv(this)">下載 CSV</button>
+    <button type="button" name="downloadPdf" onclick="clickExportPdf(this)">下載 PDF</button>
 
     <script>
         // 下載檔案
@@ -72,18 +72,18 @@
         }
 
         // PDF 下載
-        function clickExportPDF(button) {
-            downloadFile('/downloadFile/downloadPDF', 'application/pdf', '.pdf', button);
+        function clickExportPdf(button) {
+            downloadFile('/downloadFile/downloadPdf', 'application/pdf', '.pdf', button);
         }
         
         // CSV 下載
-        function clickExportCSV(button) {
-            downloadFile('/downloadFile/downloadCSV', 'text/csv', '.csv', button);
+        function clickExportCsv(button) {
+            downloadFile('/downloadFile/downloadCsv', 'text/csv', '.csv', button);
         }
 
         // XLSX 下載
-        function clickExportXLSX(button) {
-            downloadFile('/downloadFile/downloadXLSX', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx', button);  
+        function clickExportXlsx(button) {
+            downloadFile('/downloadFile/downloadXlsxOnePageOnly', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', '.xlsx', button);  
         }
         
 

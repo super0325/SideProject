@@ -39,13 +39,14 @@ import com.spire.xls.Workbook;
 @Component
 public class DownloadFileUtil {
 	
+	protected final String ONE_PAGE_ONLY = "ONE_PAGE_ONLY";
+	protected final String PAGEABLE = "PAGEABLE";
+	
 	@Autowired
 	private ResourceLoader resourceLoader;
 	
 	// 共用 Excel 工作簿，必先執行產生 Excel
 	protected XSSFWorkbook xssfWorkbook = new XSSFWorkbook();
-	// 預設模板首頁的標題排數
-	protected int templateTitleRows = -999; 
 	
 	
 	/**
@@ -78,23 +79,66 @@ public class DownloadFileUtil {
 	    
 	    return is;
 	}
-
+	
 	/**
 	 * 使用 apache poi，根據自定義模板檔案，以及資料列表生成 Excel。
 	 * 模板檔案的第一列，須給樣板樣式
 	 * 
 	 * @param <T>
-	 * @param templatePath          模板檔案的資源路徑
-	 * @param dataList              包含資料的列表
-	 * @param targetRowIndex        目標"列"的起始索引，上方，工作表中的特定位置
-	 * @param columnIndexLeft       目標"欄"的起始索引，左側，工作表中的特定位置
-	 * @param getterListForExcel    包含需要的getter列表
-	 * @param templateTitleRows     模板的首頁標題排數
-	 * @param limitRow              每頁限制的排數
+	 * 
+	 * @param templatePath        模板檔案的資源路徑
+	 * @param dataList            包含資料的列表
+	 * @param targetRowIndex      目標列的起始索引，用於將資料插入工作表中的特定位置
+	 * @param columnIndexLeft     左邊資料的起始列索引
+	 * @param getterListForExcel  包含需要的getter列表
+	 * 
+	 * @return XSSFWorkbook 物件，代表生成的 Excel 工作簿
 	 * 
 	 * @throws Exception 
 	 */
-	protected <T> void simpleExcelMaker(String templatePath, List<T> dataList, int targetRowIndex, int columnIndexLeft, List<String> getterListForExcel,int templateTitleRows, int limitRow) throws Exception {
+	public <T> void simpleExcelMakerOnePageOnly(String templatePath, List<T> dataList, int targetRowIndex, int columnIndexLeft, List<String> getterListForExcel) throws Exception {
+		
+		// 獲取模板文件的 InputStream
+		try (InputStream templateStream = getTemplateAsInputStream(templatePath);) {
+			
+			// 基於模板，創建一個新的 XSSFWorkbook 對象，代表 Excel 工作簿
+			xssfWorkbook = new XSSFWorkbook(templateStream);
+			// 獲取工作表對象，代表 Excel 中的頁
+			XSSFSheet sheet = xssfWorkbook.getSheetAt(0);
+			// 模板中的來源列，即模板行
+			int sourceRowIndex = 1;
+			// 獲取資料列表的大小
+			int dataSize = dataList.size();
+			
+			for (int i = 0; i < dataSize; i++) {
+				T data = dataList.get(i);                             // 獲取當前資料
+				// 將資料的值設置到工作表的對應儲存格中
+				copyCellStyleAndHeightAndSetValue(sheet, data, sourceRowIndex, i + targetRowIndex, columnIndexLeft, getterListForExcel);
+			}
+			
+		} catch (IOException e) {
+			String errorMessage = "simpleExcelMakerOnePageOnly 錯誤: " + e.getMessage();
+            System.err.println(errorMessage);
+        	throw e;
+		}
+	}
+
+	/**
+	 * 使用 apache poi，根據自定義模板檔案，以及資料列表生成 Excel。
+	 * 限制的排數的下一列，須給樣板樣式
+	 * 
+	 * @param <T>
+	 * 
+	 * @param templatePath        模板檔案的資源路徑
+	 * @param dataList            包含資料的列表
+	 * @param targetRowIndex      目標列的起始索引，用於將資料插入工作表中的特定位置
+	 * @param columnIndexLeft     左邊資料的起始列索引
+	 * @param getterListForExcel  包含需要的getter列表
+	 * @param limitRow            每頁限制的排數
+	 * 
+	 * @throws Exception 
+	 */
+	protected <T> void simpleExcelMakerForPageable(String templatePath, List<T> dataList, int targetRowIndex, int columnIndexLeft, List<String> getterListForExcel, int limitRow) throws Exception {
 	    // 獲取模板文件的 InputStream
 		try (InputStream is = getTemplateAsInputStream(templatePath);) {
 				
@@ -106,6 +150,8 @@ public class DownloadFileUtil {
             int sourceRowIndex = limitRow + 1;
             // 獲取資料列表的大小
             int dataSize = dataList.size();
+            // 預設模板首頁的標題排數
+        	int templateTitleRows = targetRowIndex - 1; 
             // 計算需要的總頁數(標題加上資料數)，將資料列表分頁處理以便放入 Excel 工作表
             int totalPage = ((dataSize + templateTitleRows) / limitRow) + 1;
             
@@ -129,7 +175,7 @@ public class DownloadFileUtil {
             removeLastRowFromSheets(xssfWorkbook, limitRow);
 	            
 		} catch (IOException e) {
-			String errorMessage = "simpleExcelMaker 錯誤: " + e.getMessage();
+			String errorMessage = "simpleExcelMakerForPageable 錯誤: " + e.getMessage();
             System.err.println(errorMessage);
         	throw e;
 		}
@@ -151,7 +197,7 @@ public class DownloadFileUtil {
 	}
 	
 	/**
-	 * 從每個工作表中移除最後一行。
+	 * 從每個工作表中移除最後一行(模板行)。。
 	 * 
 	 * @param xssfWorkbook 要操作的 XSSFWorkbook 對象
 	 * @param limitRow     每頁限制的行數
@@ -168,9 +214,29 @@ public class DownloadFileUtil {
 	}
 	
 	/**
+	 * 從每個工作表中移除第一行(模板行)。
+	 * 
+	 * @param xssfWorkbook 要操作的 XSSFWorkbook 對象
+	 */
+	private void removeFirstRowFromSheets(XSSFWorkbook xssfWorkbook) {
+		// 獲取工作簿中的總頁數
+		int totalPage = xssfWorkbook.getNumberOfSheets();
+		
+		// 遍歷每個工作表，移除第一行
+		for (int i = 0; i < totalPage; i++) {
+			XSSFSheet tmpSheet = xssfWorkbook.getSheetAt(i);
+			tmpSheet.removeRow(tmpSheet.getRow(0));
+			// 刪除第一列，並向上移動所有列
+//			tmpSheet.shiftRows(1, tmpSheet.getLastRowNum(), -1); 
+		}
+		
+	}
+	
+	/**
 	 * 複製來源列的儲存格高度以及樣式(包括字體)至目標列的儲存格，同時設置值。
 	 *
 	 * @param <T>                 泛型型別，表示傳入的 data 對象的型別
+	 * 
 	 * @param sheet               工作表對象，代表 Excel 中的頁
 	 * @param data                包含資料的對象
 	 * @param sourceRowIndex      來源列的索引
@@ -316,18 +382,24 @@ public class DownloadFileUtil {
     }
     
     /**
-     *  將 XSSFWorkbook 對象轉換為 InputStreamResource 並設定相關屬性。
+     * 依頁面形式，將 XSSFWorkbook 對象轉換為 InputStreamResource 並設定相關屬性。
+     *  
+     * @param pageStyle      頁面形式(分頁與否)
      * 
      * @return InputStreamResource 物件，包含轉換後的資源
      * 
      * @throws Exception 
      */
-    protected InputStreamResource convertXlsxToISR() throws Exception {
+    protected InputStreamResource convertXlsxToISR(String pageStyle) throws Exception {
     	
     	ByteArrayOutputStream baos = new ByteArrayOutputStream(); // 創建一個字節陣列輸出流
     	InputStreamResource isr = null; // 這個物件可用於後續操作，例如設定 HTTP 響應的主體部分
     	
     	try {
+    		if(pageStyle.equals("ONE_PAGE_ONLY")) {
+    			removeFirstRowFromSheets(xssfWorkbook);
+    		}
+    		
     		// 將 XSSFWorkbook 寫入到字節陣列輸出流中
     		xssfWorkbook.write(baos);
     		
