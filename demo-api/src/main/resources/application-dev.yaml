@@ -23,6 +23,13 @@ spring:
     url: jdbc:sqlserver://localhost:1433;databaseName=openApi;TrustServerCertificate=True;encrypt=true;
     username: sa
     password: "0000"
+#  jpa:
+## -------------JPA------------- 
+#    show-sql: true
+#    hibernate:
+#      ddl-auto: validate
+#      dialect: org.hibernate.dialect.MySQL8Dialect  # 或 org.hibernate.dialect.SQLServerDialect
+#      format_sql: true
     
 openApiUrl: http://localhost:9090/openApi
 openApiServer: Development server
